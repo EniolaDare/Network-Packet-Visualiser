@@ -1,47 +1,108 @@
-# Network Packet Visualiser - Product Backlog
+# Single-file Network Packet Visualiser
 
-**Project goal:** Build a simple Python application that lets users load saved network capture files, explore packets, filter traffic and view basic statistics.
+An offline network packet dashboard contained in one Python source file:
+`network_packet_visualiser.py`. It uses Scapy, Streamlit, Plotly and Pandas.
+The sample capture is generated in memory, so no separate PCAP, helper modules
+or configuration file is required. Third-party libraries must still be installed.
 
-**Technologies:** Python, Scapy, Streamlit and Plotly.
+## What it does
 
-## Running the Project
-1. Install the packages:
+- Upload PCAP or PCAPNG captures.
+- Browse a paginated packet table and inspect decoded layers and raw bytes.
+- Filter by protocol and an exact source/destination IPv4 or IPv6 address.
+- View protocol distribution, top IPs and traffic over time.
+- View a connection bubble map: bubble area represents each address's total
+  packet bytes sent across the loaded capture, before filters. Lines follow
+  filtered connections; their hover markers show direction, bytes and packets.
+- Export all matching loaded packets to CSV.
+- Try the built-in 108-packet synthetic sample without another file.
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Windows setup
 
-2. Start the application:
+Install Python 3.11 or 3.12 from https://www.python.org/downloads/windows/.
+Enable **Add python.exe to PATH** during installation. Open a new PowerShell
+window afterwards so it sees the updated PATH.
 
-   ```bash
-   streamlit run main.py
-   ```
+Open PowerShell in the folder containing `network_packet_visualiser.py` and run:
 
-## Product backlog
+```powershell
+python --version
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install "scapy>=2.6.1,<3" "streamlit>=1.40,<2" "plotly>=5.24,<7" "pandas>=2.2,<3"
+.\.venv\Scripts\python.exe -m streamlit run network_packet_visualiser.py --global.developmentMode false --server.address 127.0.0.1 --server.maxUploadSize 25 --browser.gatherUsageStats false
+```
 
-| ID | User story  | Priority |
-|---|---|---|
-| PB01 | As a user, I want to upload a `.pcap` or `.pcapng` file so that I can analyse saved network traffic. | Must |
-| PB02 | As a user, I want the application to read packets from the uploaded file so that the capture can be explored. | Must |
-| PB03 | As a user, I want to see a packet list containing the packet number, timestamp, source IP, destination IP, protocol and size. | Must |
-| PB04 | As a user, I want to select a packet and inspect its details so that I can understand its headers. | Must |
-| PB05 | As a user, I want to filter packets by protocol so that I can find TCP, UDP, ICMP or DNS traffic. | Must |
-| PB06 | As a user, I want to filter packets by source or destination IP address so that I can examine traffic involving a particular device. | Must |
-| PB07 | As a user, I want to see the total packet count and amount of data transferred so that I can understand the size of the capture. | Must |
-| PB08 | As a user, I want to see a chart of protocol distribution so that I can understand which protocols are present. | Should |
-| PB09 | As a user, I want to see the most active IP addresses so that I can identify the main communicating devices. | Should |
-| PB10 | As a user, I want clear feedback when a file is invalid or cannot be read. | Must |
-| PB11 | As a user, I want to clear filters and return to the full packet list. | Should |
-| PB12 | As a user, I want a clear, organised interface so that the application is easy to use. | Must |
-| PB13 | As a user, I want to inspect packet contents in hexadecimal format so that I can view the raw packet data. | Could |
-| PB14 | As a user, I want to view traffic volume over time so that I can identify changes in network activity. | Could |
-| PB15 | As a user, I want to export basic packet statistics so that I can use the results elsewhere. | Could |
+Open http://127.0.0.1:8501/ if the browser does not open automatically.
+Stop the app with Ctrl+C in PowerShell. On subsequent runs, only the last command
+is needed. No activation or PowerShell execution-policy change is required.
 
-## Scope boundaries
+If `python` is not recognised, install Python and reopen PowerShell, or use the
+full path to your installed `python.exe`. If `python` opens the Microsoft Store,
+use the actual installed Python executable. The `py` launcher is optional; if
+installed, `py -3.12 -m venv .venv` can replace the environment creation command.
+Do not continue to the `.venv` commands if creating the environment failed.
 
-The first version will analyse capture files supplied by the user. It will not include:
+Administrator privileges and Npcap are not needed for offline capture reading.
+An optional capture-driver warning from Scapy can be ignored for this app.
 
-- Live packet capture.
-- Custom protocol decoding.
-- Advanced TCP stream analysis.
-- Network topology mapping.
+## Using the dashboard
+
+1. The included sample opens automatically; choose **Upload capture** to use yours.
+2. Set the maximum number of packets in the sidebar.
+3. Select protocols and optionally enter one complete IP address. Empty protocol
+   selection gives no matches. Partial addresses and CIDR filters are not supported.
+4. Explore the bubble map, table and charts. Select a packet number for its details.
+5. Choose **Download filtered CSV** to export matching rows from every table page.
+
+All timestamps are UTC. The sample uses fixed timestamps starting 1 January 2025.
+Map positions are a circular layout and do not represent geography. Receive-only
+addresses have a minimum visible bubble, even with zero sent bytes. ARP protocol
+addresses are included. Hover the small markers on lines to distinguish directions.
+
+## How the code works
+
+The single file contains three logical parts: Scapy parsing and Pandas analysis,
+Plotly connection-map construction, and Streamlit presentation. Sample-generation
+functions create packets in memory. The current parsed capture is retained in the
+user's Streamlit session to avoid reparsing on every interaction. No local helper
+Python files are imported.
+
+The app only reads saved captures. It does not capture or send network packets,
+decrypt traffic, or identify every application protocol. DNS is counted separately
+from TCP/UDP; the remaining decoded protocols get exclusive labels. Byte totals
+use original packet wire length when available, otherwise captured length, rather
+than application payload size.
+
+## Limits
+
+- 25 MiB per uploaded file; enforced by both the parser and the launch command.
+- Up to 20,000 analysed packets, with a warning when more packets exist.
+- Captured records above 256 KiB are rejected.
+- Map: at most 40 addresses ranked by total sent bytes, and 200 directed links.
+  A warning reports omitted nodes/connections. Totals still include all loaded
+  packets sent by displayed addresses.
+- Packet table pages contain 250 rows; hex preview shows at most 2,048 bytes.
+- When the packet limit is reached, capture-wide totals refer to the loaded subset.
+- Empty time buckets are omitted to keep large timestamp gaps manageable.
+
+Capture uploads stay in process/session memory; they are not saved by the app.
+CSV text is escaped against spreadsheet formula injection. Parser errors get
+friendly messages, but successful parsing does not certify file integrity. Use
+trusted captures locally; the app is not an isolated hostile-file sandbox.
+
+## Troubleshooting
+
+- **Not Found page:** use the complete launch command, including
+  `--global.developmentMode false`, then refresh the browser.
+- **Port already in use:** append `--server.port 8502`; open http://127.0.0.1:8502/.
+- **Missing library:** rerun the dependency installation using the same `.venv`
+  Python executable used to start Streamlit.
+- **No packets match:** clear the IP field and select the desired protocols.
+- **Capture too large:** split it externally into smaller captures.
+
+## Validation
+
+The combined file was tested with Streamlit AppTest for sample loading, connection
+map rendering, DNS filtering and invalid-IP handling. The modular source's eight
+tests also passed before combination. This does not replace manual testing of
+every capture format or a browser upload/download.
