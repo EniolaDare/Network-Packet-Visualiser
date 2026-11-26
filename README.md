@@ -22,10 +22,9 @@ Create the basic application foundation, load a saved packet capture and display
 - [x] **S1-01:** Create the shared Git repository and agree on the initial folder structure.
 - [x] **S1-02:** Set up the Python environment and install Streamlit and Scapy.
 - [x] **S1-03:** Create the basic Streamlit application and page layout.
-- [ ] **S1-04:** Add a file upload control for `.pcap` and `.pcapng` files.
-- [ ] **S1-05:** Use Scapy to read packets from an uploaded capture file.
-- [ ] **S1-06:** Extract packet number, timestamp, source IP, destination IP, protocol and size where available.
-- [ ] **S1-07:** Display the extracted packet information in a table.
-- [ ] **S1-08:** Handle invalid files, empty captures and packets without IP information.
-- [ ] **S1-09:** Test the application using at least one valid capture file and one invalid file.
-- [ ] **S1-10:** Review the code, merge changes and demonstrate the sprint result.
+- [x] **S1-04:** Add a file upload control for `.pcap` and `.pcapng` files.
+- [x] **S1-05:** Use Scapy to read packets from an uploaded capture file.
+- [x] **S1-06:** Extract packet number, timestamp, source IP, destination IP, protocol and size where available.
+- [x] **S1-07:** Display the extracted packet information in a table.
+- [x] **S1-08:** Handle invalid files, empty captures and packets without IP information.
+- [x] **S1-09:** Test the application using at least one valid capture file and one invalid file.
