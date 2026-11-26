@@ -1,30 +1,15 @@
 # Network Packet Visualiser — Sprint 1 Backlog
 
-**Suggested duration:** 1 week 
-
-## Sprint Goal
-
-Create the basic application foundation, load a saved packet capture and display its packets in a simple table.
-
-
 ## Selected Product Backlog Items
 
-| Product Backlog ID | Item | Priority |
-|---|---|---|
-| PB01 | Upload a PCAP/PCAPNG file | High |
-| PB02 | Read packets from the uploaded file | High |
-| PB03 | Display the basic packet list | High |
-| PB10 | Show an error for an invalid or unreadable file | Medium |
-| PB12 | Provide a basic, usable interface | Medium |
-
-## Sprint Tasks
-
-- [x] **S1-01:** Create the shared Git repository and agree on the initial folder structure.
-- [x] **S1-02:** Set up the Python environment and install Streamlit and Scapy.
-- [x] **S1-03:** Create the basic Streamlit application and page layout.
-- [x] **S1-04:** Add a file upload control for `.pcap` and `.pcapng` files.
-- [x] **S1-05:** Use Scapy to read packets from an uploaded capture file.
-- [x] **S1-06:** Extract packet number, timestamp, source IP, destination IP, protocol and size where available.
-- [x] **S1-07:** Display the extracted packet information in a table.
-- [x] **S1-08:** Handle invalid files, empty captures and packets without IP information.
-- [x] **S1-09:** Test the application using at least one valid capture file and one invalid file.
+| Product Backlog ID | Item | 
+|---|---|
+| PB01 | Upload a PCAP/PCAPNG file |
+| PB02 | Read packets from the uploaded file |
+| PB03 | Display the basic packet list |
+| PB04 | As a user, I want to select a packet and inspect its details so that I can understand its headers. |
+| PB05 | As a user, I want to filter packets by protocol so that I can find TCP, UDP, ICMP or DNS traffic. |
+| PB06 | As a user, I want to filter packets by source or destination IP address so that I can examine traffic involving a particular device. |
+| PB07 | As a user, I want to see the total packet count and amount of data transferred so that I can understand the size of the capture. | 
+| PB10 | Show an error for an invalid or unreadable file |
+| PB12 | Provide a basic, usable interface |
