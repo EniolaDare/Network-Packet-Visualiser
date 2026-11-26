@@ -259,6 +259,71 @@ def sample_bytes():
         writer.close()
 
 
+# CONNECTION BUBBLE MAP
+
+def connection_data(frame, capture_frame, max_nodes=40, max_links=200):
+    visible = frame[frame.source.ne('') & frame.destination.ne('')]
+    links = visible.groupby(['source', 'destination'], as_index=False).agg(bytes=('length', 'sum'), packets=('number', 'size'))
+
+    sent = capture_frame[capture_frame.source.ne('')].groupby('source').length.sum()
+    addresses = set(visible.source) | set(visible.destination)
+    ranked = sorted(addresses, key=lambda ip: (-int(sent.get(ip, 0)), ip))
+
+    nodes = pd.DataFrame({'IP': ranked[:max_nodes]})
+    nodes['sent_bytes'] = [int(sent.get(ip, 0)) for ip in nodes.IP]
+    selected = set(nodes.IP)
+
+    shown = links[links.source.isin(selected) & links.destination.isin(selected)]
+    shown = shown.sort_values(['bytes', 'source', 'destination'], ascending=[False, True, True]).head(max_links)
+
+    return (nodes, shown, len(addresses) - len(nodes), len(links) - len(shown))
+
+def connection_figure(nodes, links):
+    fig = go.Figure()
+
+    if nodes.empty:
+        return fig
+
+    count = len(nodes)
+    positions = {ip: (math.cos(2 * math.pi * i / count), math.sin(2 * math.pi * i / count)) for i, ip in enumerate(nodes.IP)}
+    xs, ys = ([], [])
+    mid_x, mid_y, descriptions = ([], [], [])
+
+    for edge in links.itertuples():
+        x1, y1 = positions[edge.source]
+        x2, y2 = positions[edge.destination]
+
+        if edge.source == edge.destination:
+            angle = math.atan2(y1, x1)
+            cx, cy = (x1 + 0.13 * math.cos(angle), y1 + 0.13 * math.sin(angle))
+            line_x = [cx + 0.13 * math.cos(t * 2 * math.pi / 24) for t in range(25)]
+            line_y = [cy + 0.13 * math.sin(t * 2 * math.pi / 24) for t in range(25)]
+            mx, my = (cx + 0.13 * math.cos(angle), cy + 0.13 * math.sin(angle))
+        else:
+            line_x, line_y = ([x1, x2], [y1, y2])
+            mx, my = (0.6 * x1 + 0.4 * x2, 0.6 * y1 + 0.4 * y2)
+
+        xs.extend(line_x + [None])
+        ys.extend(line_y + [None])
+        mid_x.append(mx)
+        mid_y.append(my)
+
+        descriptions.append(f'{edge.source} → {edge.destination}<br>{edge.bytes:,} bytes · {edge.packets:,} packets')
+
+    fig.add_trace(go.Scatter(x=xs, y=ys, mode='lines', line=dict(color='rgba(130,150,180,0.55)', width=2), hoverinfo='skip'))
+    fig.add_trace(go.Scatter(x=mid_x, y=mid_y, mode='markers', marker=dict(size=9, color='#8496b4'), text=descriptions, hovertemplate='%{text}<extra></extra>'))
+
+    maximum = max(int(nodes.sent_bytes.max()), 1)
+
+    fig.add_trace(go.Scatter(x=[positions[ip][0] for ip in nodes.IP], y=[positions[ip][1] for ip in nodes.IP], mode='markers+text', text=nodes.IP.tolist(), textposition='top center', customdata=nodes[['sent_bytes']].to_numpy(), marker=dict(size=nodes.sent_bytes.tolist(), sizemode='area', sizeref=2 * maximum / 90 ** 2, sizemin=6, color=nodes.sent_bytes.tolist(), colorscale='Blues', line=dict(width=2, color='#55b9ed')), hovertemplate='%{text}<br>Total sent over loaded capture: %{customdata[0]:,} bytes<extra></extra>'))
+    fig.update_layout(height=620, showlegend=False, dragmode='pan', margin=dict(l=50, r=50, t=40, b=40), xaxis=dict(visible=False, range=[-1.5, 1.5]), yaxis=dict(visible=False, range=[-1.5, 1.5], scaleanchor='x', scaleratio=1))
+    
+    return fig
+
+from pathlib import Path
+from scapy.all import Ether, IP, IPv6, TCP, UDP, ICMP, ARP, DNS, DNSQR, DNSRR, Raw, wrpcap
+
+
 # STREAMLIT APPLICATION
 
 st.set_page_config(
@@ -386,6 +451,19 @@ st.caption(
 if frame.empty:
     st.info('No packets match these filters. Select a protocol or clear the IP filter.')
     st.stop()
+
+# CONNECTION BUBBLE MAP
+st.subheader('Connection bubble map')
+nodes, links, hidden_nodes, hidden_links = connection_data(frame, capture.table)
+
+if nodes.empty:
+    st.info('No IP or ARP endpoints in the matching packets.')
+else:
+    st.plotly_chart(connection_figure(nodes, links), use_container_width=True)
+    st.caption('Each bubble is an IP address. Bubble area scales with total packet bytes sent over the entire loaded capture, before sidebar filters. Receive-only addresses have a small minimum bubble. Lines follow the current filters; hover a line marker for direction, bytes and packet count. Includes ARP addresses. Drag to pan and use the toolbar to zoom.')
+
+    if hidden_nodes or hidden_links:
+        st.warning(f'Map limited to 40 addresses and 200 directed connections for readability. {hidden_nodes:,} addresses and {hidden_links:,} connections omitted. Shown bubble totals still include all loaded packets sent by that address.')
 
 
 # PACKET TABLE AND CSV EXPORT
